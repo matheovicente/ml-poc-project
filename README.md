@@ -6,6 +6,8 @@ The template already defines the project structure and the main execution workfl
 
 ## Repository Structure
 
+- `deliverables/`: markdown files containing all assignements
+- `deliverables/assignement1.md`: first assignement due (5 in total)
 - `data/`: raw and processed data files
 - `logs/`: log files generated during execution
 - `models/`: trained machine learning models saved to disk
