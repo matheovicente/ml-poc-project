@@ -1,30 +1,24 @@
-"""Student-owned dataset loading contract.
-
-Students must implement ``load_dataset_split`` so that ``scripts/main.py`` can
-evaluate every configured model on the same test split.
-"""
-
 from __future__ import annotations
 
 from typing import Any
 
+import pandas as pd
+from sklearn.model_selection import train_test_split
+
+from config import MONTHLY_FEATURES_PATH, NUMERIC_FEATURES, RANDOM_STATE, TEST_SIZE
+
 
 def load_dataset_split() -> tuple[Any, Any, Any, Any]:
-    """Return the dataset split used for model evaluation.
+    df = pd.read_csv(MONTHLY_FEATURES_PATH)
+    available_features = [column for column in NUMERIC_FEATURES if column in df.columns]
+    X = df[available_features].copy()
+    y = df["criticality_class"].astype(int)
 
-    Expected return value:
-        A tuple ``(X_train, X_test, y_train, y_test)``.
-
-    Constraints:
-    - ``X_train`` and ``X_test`` must contain feature data in a format accepted
-      by the trained models stored in ``config.MODELS``.
-    - ``y_train`` and ``y_test`` must contain the corresponding targets.
-    - ``y_test`` must align with the predictions produced by each loaded model.
-
-    Typical choices for the return types are ``pandas.DataFrame`` /
-    ``pandas.Series`` or ``numpy.ndarray``.
-    """
-
-    raise NotImplementedError(
-        "Implement data.load_dataset_split() before running scripts/main.py."
+    return train_test_split(
+        X,
+        y,
+        test_size=TEST_SIZE,
+        random_state=RANDOM_STATE,
+        stratify=y,
     )
+
