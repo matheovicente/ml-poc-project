@@ -9,7 +9,7 @@ from pathlib import Path
 PROJECT_DIR = Path("/Users/matheovicente/Documents/Codex/DÉTROIT MARITIMES")
 PLOTS_DIR = PROJECT_DIR / "plots"
 OUTPUT_DIR = PROJECT_DIR / "deliverables"
-OUTPUT_PPTX = OUTPUT_DIR / "presentation_detroit_maritimes_10min.pptx"
+OUTPUT_PPTX = OUTPUT_DIR / "maritime_straits_10min_presentation.pptx"
 
 SLIDE_W = 13_333_333
 SLIDE_H = 7_500_000
@@ -517,7 +517,7 @@ def build_pptx() -> None:
         for i, media_file in enumerate(media_files, start=1):
             zf.writestr(f"ppt/media/image{i}.png", media_file.read_bytes())
 
-    copy_path = OUTPUT_DIR / "presentation_detroit_maritimes_10min_copy.pptx"
+    copy_path = OUTPUT_DIR / "maritime_straits_10min_presentation_copy.pptx"
     shutil.copyfile(OUTPUT_PPTX, copy_path)
     print(OUTPUT_PPTX)
 
