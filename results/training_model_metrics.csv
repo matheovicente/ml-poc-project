@@ -1,0 +1,4 @@
+model_key,model_name,cv_best_f1_macro,accuracy,balanced_accuracy,f1_macro,f1_weighted,precision_macro,recall_macro,best_params
+log_reg,Régression logistique,0.9648247895852217,0.9724025974025974,0.9724025974025974,0.972395893429157,0.9723958934291569,0.9725041356492969,0.9724025974025974,"{'model__C': 3.0, 'model__solver': 'lbfgs'}"
+random_forest,Random Forest,0.9441178052772287,0.961038961038961,0.9610389610389611,0.9610677446976065,0.9610677446976065,0.9612775927981255,0.9610389610389611,"{'max_depth': 12, 'max_features': 'sqrt', 'min_samples_leaf': 1, 'n_estimators': 250}"
+gradient_boosting,Gradient Boosting,0.9522465879824488,0.9691558441558441,0.9691558441558441,0.969089689207035,0.9690896892070349,0.9691969778247491,0.9691558441558441,"{'learning_rate': 0.1, 'max_depth': 3, 'min_samples_leaf': 1, 'n_estimators': 150, 'subsample': 0.9}"
