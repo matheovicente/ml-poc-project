@@ -3,22 +3,19 @@ from __future__ import annotations
 from typing import Any
 
 import pandas as pd
-from sklearn.model_selection import train_test_split
 
-from config import MONTHLY_FEATURES_PATH, NUMERIC_FEATURES, RANDOM_STATE, TEST_SIZE
+from config import FEATURES, PROCESSED_DATA_PATH, TARGET, TEST_SIZE
 
 
 def load_dataset_split() -> tuple[Any, Any, Any, Any]:
-    df = pd.read_csv(MONTHLY_FEATURES_PATH)
-    available_features = [column for column in NUMERIC_FEATURES if column in df.columns]
+    df = pd.read_csv(PROCESSED_DATA_PATH, parse_dates=["date"]).sort_values("date")
+    available_features = [feature for feature in FEATURES if feature in df.columns]
     X = df[available_features].copy()
-    y = df["criticality_class"].astype(int)
+    y = df[TARGET].astype(int)
 
-    return train_test_split(
-        X,
-        y,
-        test_size=TEST_SIZE,
-        random_state=RANDOM_STATE,
-        stratify=y,
-    )
-
+    split_idx = int(len(df) * (1 - TEST_SIZE))
+    X_train = X.iloc[:split_idx]
+    X_test = X.iloc[split_idx:]
+    y_train = y.iloc[:split_idx]
+    y_test = y.iloc[split_idx:]
+    return X_train, X_test, y_train, y_test

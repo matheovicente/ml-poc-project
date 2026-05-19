@@ -27,56 +27,36 @@ from plots import plot_feature_importance, plot_model_comparison
 def evaluate_models() -> pd.DataFrame:
     ensure_directories()
     _, X_test, _, y_test = load_dataset_split()
-
     rows = []
     for model_key, model_info in MODELS.items():
-        model_path = model_info["path"]
-        if not model_path.exists():
-            raise FileNotFoundError(f"Modèle introuvable : {model_path}")
-        model = joblib.load(model_path)
-        if not hasattr(model, "predict"):
-            raise TypeError(f"Le modèle {model_key} ne possède pas de méthode predict(X).")
-
+        model = joblib.load(model_info["path"])
         y_pred = model.predict(X_test)
-        model_metrics = compute_metrics(y_test, y_pred)
+        y_score = model.predict_proba(X_test)[:, 1] if hasattr(model, "predict_proba") else None
         rows.append(
             {
                 "model_key": model_key,
                 "model_name": model_info["name"],
-                **model_metrics,
+                **compute_metrics(y_test, y_pred, y_score),
             }
         )
 
     results = pd.DataFrame(rows)
-    output_path = RESULTS_DIR / "model_metrics.csv"
-    results.to_csv(output_path, index=False)
-    print("\nMétriques des modèles")
-    print(results.to_string(index=False))
-    print(f"\nRésultats sauvegardés : {output_path}")
+    results.to_csv(RESULTS_DIR / "model_metrics.csv", index=False)
     plot_model_comparison(results, PLOTS_DIR / "model_comparison.png")
 
-    feature_importance_path = RESULTS_DIR / "feature_importance.csv"
-    if feature_importance_path.exists():
-        importances = pd.read_csv(feature_importance_path)
-        plot_feature_importance(importances, PLOTS_DIR / "feature_importance.png")
+    importance_path = RESULTS_DIR / "feature_importance.csv"
+    if importance_path.exists():
+        plot_feature_importance(pd.read_csv(importance_path), PLOTS_DIR / "feature_importance.png")
+
+    print(results.to_string(index=False))
     return results
 
 
 def launch_streamlit() -> None:
     env = os.environ.copy()
     env["PYTHONPATH"] = str(SRC_DIR)
-    app_path = SRC_DIR / "app.py"
-    print("\nLancement de Streamlit : http://localhost:8501")
     subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "streamlit",
-            "run",
-            str(app_path),
-            "--server.port",
-            "8501",
-        ],
+        [sys.executable, "-m", "streamlit", "run", str(SRC_DIR / "app.py"), "--server.port", "8501"],
         cwd=PROJECT_ROOT,
         env=env,
         check=False,

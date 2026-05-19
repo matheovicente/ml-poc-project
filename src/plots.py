@@ -10,7 +10,7 @@ def _style() -> None:
     plt.style.use("seaborn-v0_8-whitegrid")
     plt.rcParams.update(
         {
-            "figure.figsize": (12, 7),
+            "figure.figsize": (11, 6),
             "axes.titlesize": 14,
             "axes.labelsize": 10,
             "savefig.dpi": 160,
@@ -18,97 +18,72 @@ def _style() -> None:
     )
 
 
-def plot_criticality_ranking(summary: pd.DataFrame, output: Path, top_n: int = 15) -> None:
+def plot_pump_brent_timeseries(df: pd.DataFrame, output: Path) -> None:
     _style()
-    data = summary.sort_values("criticality_score", ascending=True).tail(top_n)
-    fig, ax = plt.subplots()
-    colors = data["criticality_class"].map({0: "#94a3b8", 1: "#38bdf8", 2: "#f59e0b", 3: "#ef4444"})
-    ax.barh(data["portname"], data["criticality_score"], color=colors)
-    ax.set_title("Classement de criticité des chokepoints")
-    ax.set_xlabel("Score de criticité (0-100)")
+    fig, ax1 = plt.subplots()
+    ax1.plot(df["date"], df["pump_price"], color="#dc2626", label="Pump price")
+    ax1.set_ylabel("Gasoline price ($/gallon)")
+    ax2 = ax1.twinx()
+    ax2.plot(df["date"], df["brent_price"], color="#2563eb", alpha=0.75, label="Brent")
+    ax2.set_ylabel("Brent ($/barrel)")
+    ax1.set_title("Gasoline price and Brent crude oil")
     fig.tight_layout()
     fig.savefig(output)
     plt.close(fig)
 
 
-def plot_traffic_by_chokepoint(summary: pd.DataFrame, output: Path, top_n: int = 15) -> None:
+def plot_tanker_traffic(df: pd.DataFrame, output: Path) -> None:
     _style()
-    data = summary.sort_values("mean_n_total", ascending=True).tail(top_n)
+    cols = [
+        "strait_of_hormuz_n_tanker",
+        "bab_el_mandeb_strait_n_tanker",
+        "suez_canal_n_tanker",
+        "malacca_strait_n_tanker",
+    ]
+    labels = ["Hormuz", "Bab el-Mandeb", "Suez", "Malacca"]
     fig, ax = plt.subplots()
-    ax.barh(data["portname"], data["mean_n_total"], color="#2ca02c")
-    ax.set_title("Trafic moyen journalier par chokepoint")
-    ax.set_xlabel("Nombre moyen de navires par jour")
-    fig.tight_layout()
-    fig.savefig(output)
-    plt.close(fig)
-
-
-def plot_tanker_capacity(summary: pd.DataFrame, output: Path, top_n: int = 15) -> None:
-    _style()
-    data = summary.sort_values("mean_capacity_tanker", ascending=True).tail(top_n)
-    fig, ax = plt.subplots()
-    ax.barh(data["portname"], data["mean_capacity_tanker"], color="#d62728")
-    ax.set_title("Capacité tanker moyenne par chokepoint")
-    ax.set_xlabel("Capacité tanker moyenne journalière")
-    fig.tight_layout()
-    fig.savefig(output)
-    plt.close(fig)
-
-
-def plot_disruption_frequency(summary: pd.DataFrame, output: Path, top_n: int = 15) -> None:
-    _style()
-    data = summary.sort_values("disruption_frequency_total", ascending=True).tail(top_n)
-    fig, ax = plt.subplots()
-    ax.barh(data["portname"], data["disruption_frequency_total"], color="#9467bd")
-    ax.set_title("Fréquence des perturbations détectées")
-    ax.set_xlabel("Part des jours avec z-score trafic < -2")
+    for col, label in zip(cols, labels):
+        if col in df.columns:
+            ax.plot(df["date"], df[col].rolling(4).mean(), label=label)
+    ax.set_title("Weekly tanker traffic around strategic chokepoints")
+    ax.set_ylabel("Tankers per week")
+    ax.legend()
     fig.tight_layout()
     fig.savefig(output)
     plt.close(fig)
 
 
 def plot_model_comparison(metrics: pd.DataFrame, output: Path) -> None:
-    _style()
-    if metrics.empty or "f1_macro" not in metrics.columns:
+    if metrics.empty:
         return
-    label_col = "model_name" if "model_name" in metrics.columns else "model_key"
-    metric_columns = [
-        column
-        for column in ["accuracy", "balanced_accuracy", "f1_macro", "f1_weighted"]
-        if column in metrics.columns
-    ]
-    data = metrics.sort_values("f1_macro", ascending=True).set_index(label_col)[metric_columns]
-    fig, ax = plt.subplots(figsize=(10, 5.5))
-    data.plot(kind="barh", ax=ax, width=0.78)
-    ax.set_title("Comparaison des modèles")
-    ax.set_xlabel("Score")
+    _style()
+    cols = [col for col in ["accuracy", "balanced_accuracy", "f1", "roc_auc"] if col in metrics.columns]
+    data = metrics.set_index("model_name")[cols].sort_values("f1")
+    fig, ax = plt.subplots(figsize=(10, 5))
+    data.plot(kind="barh", ax=ax)
     ax.set_xlim(0, 1)
-    ax.legend(loc="lower right")
+    ax.set_title("Model comparison")
+    ax.set_xlabel("Score")
     fig.tight_layout()
     fig.savefig(output)
     plt.close(fig)
 
 
-def plot_feature_importance(
-    importances: pd.DataFrame,
-    output: Path,
-    model_key: str = "gradient_boosting",
-    top_n: int = 12,
-) -> None:
-    if importances.empty or "model_key" not in importances.columns:
+def plot_feature_importance(importances: pd.DataFrame, output: Path, model_key: str = "gradient_boosting") -> None:
+    if importances.empty:
         return
-    _style()
     data = (
         importances[importances["model_key"].eq(model_key)]
         .sort_values("importance", ascending=True)
-        .tail(top_n)
+        .tail(15)
     )
     if data.empty:
         return
+    _style()
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.barh(data["feature"], data["importance"], color="#0f766e")
-    ax.set_title("Variables les plus importantes")
-    ax.set_xlabel("Importance relative")
+    ax.set_title("Top feature importance")
+    ax.set_xlabel("Importance")
     fig.tight_layout()
     fig.savefig(output)
     plt.close(fig)

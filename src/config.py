@@ -12,47 +12,61 @@ RESULTS_DIR = PROJECT_ROOT / "results"
 PLOTS_DIR = PROJECT_ROOT / "plots"
 LOGS_DIR = PROJECT_ROOT / "logs"
 
-RAW_DATA_PATH = RAW_DATA_DIR / "portwatch_daily_chokepoints.csv"
-MONTHLY_FEATURES_PATH = PROCESSED_DATA_DIR / "chokepoint_monthly_features.csv"
-SUMMARY_FEATURES_PATH = PROCESSED_DATA_DIR / "chokepoint_summary_features.csv"
+PORTWATCH_RAW_PATH = RAW_DATA_DIR / "portwatch_daily_chokepoints.csv"
+PROCESSED_DATA_PATH = PROCESSED_DATA_DIR / "pump_price_dataset.csv"
 
 RANDOM_STATE = 42
-TEST_SIZE = 0.25
+TEST_SIZE = 0.2
 
-NUMERIC_FEATURES = [
-    "mean_n_total",
-    "std_n_total",
-    "cv_n_total",
-    "mean_n_tanker",
-    "tanker_share",
-    "mean_capacity",
-    "mean_capacity_tanker",
-    "tanker_capacity_share",
-    "mean_n_container",
-    "mean_n_dry_bulk",
-    "mean_n_general_cargo",
-    "mean_n_cargo",
-    "disruption_frequency_total",
-    "disruption_frequency_tanker",
-    "max_drop_n_total",
-    "max_drop_n_tanker",
-    "observed_days",
+FEATURES = [
+    "strait_of_hormuz_n_tanker",
+    "strait_of_hormuz_n_tanker_ma4",
+    "strait_of_hormuz_n_tanker_ma12",
+    "strait_of_hormuz_n_tanker_ratio12",
+    "strait_of_hormuz_n_tanker_lag1",
+    "bab_el_mandeb_strait_n_tanker",
+    "bab_el_mandeb_strait_n_tanker_ma4",
+    "bab_el_mandeb_strait_n_tanker_ratio12",
+    "suez_canal_n_tanker",
+    "suez_canal_n_tanker_ma4",
+    "suez_canal_n_tanker_ratio12",
+    "malacca_strait_n_tanker",
+    "malacca_strait_n_tanker_ma4",
+    "malacca_strait_n_tanker_ratio12",
+    "maritime_stress",
+    "brent_price",
+    "brent_return_1w",
+    "brent_return_4w",
+    "brent_vol_4w",
+    "brent_return_1w_lag1",
+    "brent_return_1w_lag2",
+    "pump_price",
+    "pump_return_1w",
+    "pump_return_4w",
+    "pump_return_1w_lag1",
+    "pump_return_1w_lag2",
+    "month",
+    "week_of_year",
+    "is_driving_season",
+    "is_winter",
 ]
+
+TARGET = "target_price_up_1w"
 
 MODELS = {
     "log_reg": {
-        "name": "Régression logistique",
-        "description": "Baseline linéaire avec standardisation des variables.",
+        "name": "Logistic Regression",
+        "description": "Linear baseline with standardized features.",
         "path": MODELS_DIR / "log_reg.joblib",
     },
     "random_forest": {
         "name": "Random Forest",
-        "description": "Ensemble d'arbres pour capturer les relations non linéaires.",
+        "description": "Tree ensemble capturing non-linear feature interactions.",
         "path": MODELS_DIR / "random_forest.joblib",
     },
     "gradient_boosting": {
         "name": "Gradient Boosting",
-        "description": "Modèle boosting pour classifier le niveau de criticité.",
+        "description": "Boosted trees optimized for short-term directional classification.",
         "path": MODELS_DIR / "gradient_boosting.joblib",
     },
 }
@@ -68,4 +82,3 @@ def ensure_directories() -> None:
         LOGS_DIR,
     ]:
         directory.mkdir(parents=True, exist_ok=True)
-

@@ -4,9 +4,10 @@ import sys
 from pathlib import Path
 
 import joblib
+import pandas as pd
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import GridSearchCV, StratifiedKFold
+from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -15,9 +16,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from config import MODELS, RANDOM_STATE, RESULTS_DIR, ensure_directories
 from data import load_dataset_split
 from metrics import compute_metrics
+from plots import plot_feature_importance
 
 
-def build_model_grids() -> dict[str, tuple[object, dict[str, list[object]]]]:
+def model_grids() -> dict[str, tuple[object, dict[str, list[object]]]]:
     return {
         "log_reg": (
             Pipeline(
@@ -25,127 +27,103 @@ def build_model_grids() -> dict[str, tuple[object, dict[str, list[object]]]]:
                     ("scaler", StandardScaler()),
                     (
                         "model",
-                        LogisticRegression(
-                            max_iter=3000,
-                            class_weight="balanced",
-                            random_state=RANDOM_STATE,
-                        ),
+                        LogisticRegression(max_iter=3000, class_weight="balanced", random_state=RANDOM_STATE),
                     ),
                 ]
             ),
-            {
-                "model__C": [0.1, 1.0, 3.0],
-                "model__solver": ["lbfgs"],
-            },
+            {"model__C": [0.1, 0.5, 1.0, 3.0]},
         ),
         "random_forest": (
-            RandomForestClassifier(
-                class_weight="balanced",
-                random_state=RANDOM_STATE,
-                n_jobs=-1,
-            ),
+            RandomForestClassifier(class_weight="balanced", random_state=RANDOM_STATE, n_jobs=-1),
             {
-                "n_estimators": [250],
-                "max_depth": [None, 12],
-                "min_samples_leaf": [1, 3],
+                "n_estimators": [250, 500],
+                "max_depth": [4, 8, None],
+                "min_samples_leaf": [2, 5],
                 "max_features": ["sqrt"],
             },
         ),
         "gradient_boosting": (
             GradientBoostingClassifier(random_state=RANDOM_STATE),
             {
-                "n_estimators": [150, 250],
-                "learning_rate": [0.05, 0.1],
+                "n_estimators": [100, 200],
+                "learning_rate": [0.03, 0.06],
                 "max_depth": [2, 3],
-                "subsample": [0.9],
-                "min_samples_leaf": [1],
+                "subsample": [0.85],
             },
         ),
     }
 
 
-def _extract_feature_importance(model_key: str, model: object, feature_names: list[str]) -> list[dict[str, object]]:
-    estimator = model
-    if hasattr(model, "named_steps"):
-        estimator = model.named_steps.get("model", model)
-
+def feature_importance_rows(model_key: str, model: object, features: list[str]) -> list[dict[str, object]]:
+    estimator = model.named_steps["model"] if hasattr(model, "named_steps") else model
     values = None
     if hasattr(estimator, "feature_importances_"):
         values = estimator.feature_importances_
     elif hasattr(estimator, "coef_"):
         values = abs(estimator.coef_).mean(axis=0)
-
     if values is None:
         return []
-
     return [
         {"model_key": model_key, "feature": feature, "importance": float(value)}
-        for feature, value in sorted(zip(feature_names, values), key=lambda item: item[1], reverse=True)
+        for feature, value in sorted(zip(features, values), key=lambda item: item[1], reverse=True)
     ]
 
 
 def main() -> None:
-    import pandas as pd
-
     ensure_directories()
     X_train, X_test, y_train, y_test = load_dataset_split()
-    model_grids = build_model_grids()
-    cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=RANDOM_STATE)
+    splitter = TimeSeriesSplit(n_splits=4)
 
+    metrics_rows = []
     cv_rows = []
-    test_rows = []
     importance_rows = []
 
-    for key, (model, param_grid) in model_grids.items():
-        print(f"\nRecherche d'hyperparamètres : {MODELS[key]['name']}")
+    for model_key, (model, grid) in model_grids().items():
+        print(f"\nTraining {MODELS[model_key]['name']}")
         search = GridSearchCV(
             model,
-            param_grid=param_grid,
-            scoring="f1_macro",
-            cv=cv,
+            grid,
+            scoring="f1",
+            cv=splitter,
             n_jobs=1,
             refit=True,
         )
         search.fit(X_train, y_train)
         best_model = search.best_estimator_
-
-        path = MODELS[key]["path"]
-        joblib.dump(best_model, path)
+        joblib.dump(best_model, MODELS[model_key]["path"])
 
         y_pred = best_model.predict(X_test)
-        test_metrics = compute_metrics(y_test, y_pred)
-        test_rows.append(
-            {
-                "model_key": key,
-                "model_name": MODELS[key]["name"],
-                "cv_best_f1_macro": float(search.best_score_),
-                **test_metrics,
-                "best_params": str(search.best_params_),
-            }
-        )
+        y_score = best_model.predict_proba(X_test)[:, 1] if hasattr(best_model, "predict_proba") else None
+        row = {
+            "model_key": model_key,
+            "model_name": MODELS[model_key]["name"],
+            "cv_best_f1": float(search.best_score_),
+            **compute_metrics(y_test, y_pred, y_score),
+            "best_params": str(search.best_params_),
+        }
+        metrics_rows.append(row)
 
-        cv_result = pd.DataFrame(search.cv_results_)
-        cv_result = cv_result.sort_values("rank_test_score").head(10)
-        for _, row in cv_result.iterrows():
+        cv_result = pd.DataFrame(search.cv_results_).sort_values("rank_test_score").head(8)
+        for _, cv_row in cv_result.iterrows():
             cv_rows.append(
                 {
-                    "model_key": key,
-                    "rank": int(row["rank_test_score"]),
-                    "mean_cv_f1_macro": float(row["mean_test_score"]),
-                    "std_cv_f1_macro": float(row["std_test_score"]),
-                    "params": str(row["params"]),
+                    "model_key": model_key,
+                    "rank": int(cv_row["rank_test_score"]),
+                    "mean_cv_f1": float(cv_row["mean_test_score"]),
+                    "std_cv_f1": float(cv_row["std_test_score"]),
+                    "params": str(cv_row["params"]),
                 }
             )
 
-        importance_rows.extend(_extract_feature_importance(key, best_model, list(X_train.columns)))
-        print(f"Meilleur CV F1 macro : {search.best_score_:.4f}")
-        print(f"Métriques test : {test_metrics}")
-        print(f"Modèle sauvegardé : {path}")
+        importance_rows.extend(feature_importance_rows(model_key, best_model, list(X_train.columns)))
+        print(row)
 
-    pd.DataFrame(test_rows).to_csv(RESULTS_DIR / "training_model_metrics.csv", index=False)
+    metrics = pd.DataFrame(metrics_rows)
+    importances = pd.DataFrame(importance_rows)
+    metrics.to_csv(RESULTS_DIR / "training_model_metrics.csv", index=False)
     pd.DataFrame(cv_rows).to_csv(RESULTS_DIR / "training_cv_results.csv", index=False)
-    pd.DataFrame(importance_rows).to_csv(RESULTS_DIR / "feature_importance.csv", index=False)
-    print(f"\nRésultats d'entraînement sauvegardés dans : {RESULTS_DIR}")
+    importances.to_csv(RESULTS_DIR / "feature_importance.csv", index=False)
+    plot_feature_importance(importances, RESULTS_DIR.parent / "plots" / "feature_importance.png")
 
 
 if __name__ == "__main__":

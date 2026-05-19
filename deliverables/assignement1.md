@@ -1,47 +1,48 @@
-# Assignment 1 - Projet de validation de concept ML
+# Assignment 1 - Pump Price Prediction
 
-## Sujet du projet
+## Project Topic
 
-Mon projet porte sur l'analyse de l'importance stratégique des détroits maritimes mondiaux et sur la simulation de l'impact potentiel d'une fermeture temporaire de certains passages critiques.
+The project predicts whether the US regular gasoline price will increase the following week.
 
-L'objectif est d'étudier comment une fermeture de détroit, par exemple le détroit d'Ormuz, le détroit de Malacca ou le détroit de Taïwan, pourrait affecter le trafic maritime observé sur les autres grands chokepoints mondiaux.
+The goal is to test whether maritime tanker traffic around strategic chokepoints, especially the Strait of Hormuz, can add predictive signal to oil-market variables such as Brent crude oil prices.
 
-## Business case
+## Business Case
 
-Le transport maritime est essentiel au commerce international. Certains détroits concentrent une part importante des flux de marchandises, d'énergie et de matières premières. Une perturbation sur ces zones peut donc avoir des conséquences économiques importantes : ralentissement des chaînes logistiques, hausse des coûts de transport, tension sur l'approvisionnement énergétique ou réorganisation temporaire des routes maritimes.
+Gasoline prices are important for households, logistics companies, retailers and public institutions. Short-term movements in pump prices can affect budgets, operating costs and pricing decisions.
 
-Le business case du projet est de construire un outil d'aide à l'analyse permettant de :
+The business case is to build a decision-support model that can:
 
-- classer les détroits selon leur criticité ;
-- identifier les détroits les plus sensibles en cas de fermeture ;
-- simuler des scénarios de fermeture sur 14, 30 et 90 jours ;
-- observer quels autres détroits pourraient voir leur trafic augmenter ou diminuer ;
-- comparer plusieurs modèles de prévision du trafic normal.
+- predict whether pump prices are likely to increase next week;
+- compare the predictive power of Brent, gasoline momentum and maritime tanker traffic;
+- identify whether chokepoint stress adds useful information;
+- provide interpretable metrics and visualizations for non-technical users.
 
-Ce projet peut être utile pour une entreprise de transport maritime, un assureur, un analyste risque, un acteur de la logistique ou une institution qui souhaite mieux comprendre les risques liés aux chokepoints maritimes.
+This project is relevant for energy analysts, logistics companies, transport operators and risk teams monitoring the impact of energy supply-chain stress.
 
-## Dataset utilisé
+## Dataset
 
-Le projet utilise des données publiques issues de PortWatch, une plateforme qui fournit des indicateurs de trafic maritime à partir de données AIS.
+The project combines public data sources:
 
-Le dataset contient des observations journalières par détroit maritime. Il inclut notamment :
+- IMF PortWatch daily chokepoint traffic data;
+- FRED weekly US regular gasoline price (`GASREGW`);
+- FRED Brent crude oil price (`DCOILBRENTEU`);
+- optional macro variables from FRED when available.
 
-- la date d'observation ;
-- le nom du chokepoint maritime ;
-- le nombre total de navires observés ;
-- le nombre de tankers ;
-- le nombre de cargos ;
-- le nombre de navires passagers ;
-- d'autres indicateurs liés au trafic maritime.
+PortWatch is aggregated from daily to weekly frequency. The final dataset contains weekly observations with:
 
-Dans la version actuelle du projet, le dataset contient environ 74 000 observations et couvre 28 détroits ou chokepoints mondiaux, dont le détroit d'Ormuz, le détroit de Malacca, le détroit de Taïwan, le détroit de Corée et le détroit de Bohai.
+- pump price;
+- Brent price and returns;
+- tanker traffic around Hormuz, Bab el-Mandeb, Suez and Malacca;
+- rolling averages and lagged features;
+- a maritime stress indicator;
+- the target variable: whether pump price increases the following week.
 
-## Approche ML envisagée
+## ML Approach
 
-Le projet combine plusieurs approches :
+The project uses three model families:
 
-1. Construction d'un score de criticité des détroits à partir de variables comme le volume moyen de trafic, la part de tankers et la volatilité du trafic.
-2. Classification des détroits selon leur niveau de criticité.
-3. Entraînement de modèles de machine learning pour comparer leur capacité à reproduire cette classification.
-4. Modélisation de séries temporelles avec SARIMAX pour prévoir le trafic normal.
-5. Simulation de scénarios de fermeture afin d'observer les effets potentiels sur les autres détroits.
+1. Logistic Regression.
+2. Random Forest.
+3. Gradient Boosting.
+
+The train/test split is chronological to respect the time-series nature of the problem. Models are evaluated with accuracy, balanced accuracy, F1 score, precision, recall and ROC AUC.

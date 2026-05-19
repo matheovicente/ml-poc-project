@@ -1,21 +1,30 @@
-# Maritime Chokepoint Risk
+# Pump Price Prediction
 
-This project studies the criticality of global maritime chokepoints using IMF
-PortWatch daily traffic data. It combines feature engineering, supervised
-classification, time-series backtesting and closure simulations.
+This project predicts whether the US regular gasoline price will increase the following week.
 
-## Business Question
+The business idea is to test whether maritime tanker traffic around strategic chokepoints, especially the Strait of Hormuz, adds useful signal to oil-market variables such as Brent.
 
-Which maritime chokepoints are the most critical in case of a temporary closure,
-and how could a closure affect traffic on other strategic routes?
+## Business Case
 
-The project focuses on operational maritime risk rather than financial markets:
+Gasoline prices are influenced by crude oil prices, refining constraints, demand cycles and geopolitical disruptions. Maritime chokepoints matter because a disruption in tanker flows can signal stress in energy supply chains.
 
-- ranking chokepoints by criticality;
-- classifying their risk level;
-- comparing model performance;
-- testing normal-traffic forecasts;
-- simulating 14, 30 and 90 day closure scenarios.
+The project asks:
+
+> Can tanker traffic around strategic chokepoints help predict short-term movements in pump prices?
+
+## Dataset
+
+The final dataset combines:
+
+- IMF PortWatch daily chokepoint data, aggregated weekly;
+- FRED weekly US regular gasoline price (`GASREGW`);
+- FRED Brent crude oil price (`DCOILBRENTEU`);
+- optional FRED macro variables when available.
+
+The main local files are:
+
+- `data/raw/portwatch_daily_chokepoints.csv`
+- `data/processed/pump_price_dataset.csv`
 
 ## Repository Structure
 
@@ -26,102 +35,50 @@ logs/                execution logs
 models/              trained ML models
 notebooks/           exploratory notebooks
 plots/               generated visualizations
-results/             metrics and simulation outputs
+results/             model metrics and outputs
 scripts/             executable project scripts
-src/                 project source code
+src/                 source code used by the professor template
 tests/               optional tests
 ```
 
-The repository follows the professor template:
+The required template contracts are preserved:
 
 - `src/data.py` exposes `load_dataset_split()`;
 - `src/metrics.py` exposes `compute_metrics(y_true, y_pred)`;
 - `src/app.py` exposes `build_app()`;
-- `scripts/main.py` evaluates the registered models and launches Streamlit.
-
-## Dataset
-
-Source: IMF PortWatch / ArcGIS API  
-Local file: `data/raw/portwatch_daily_chokepoints.csv`
-
-Current dataset:
-
-- 74,844 daily observations;
-- 28 maritime chokepoints;
-- total vessel traffic, tanker traffic, cargo traffic and capacities;
-- Strait of Hormuz included as `Strait of Hormuz`.
+- `scripts/main.py` evaluates registered models and launches Streamlit.
 
 ## Models
 
-The model families are intentionally kept stable:
+The model families are kept stable:
 
 - Logistic Regression;
 - Random Forest;
 - Gradient Boosting.
 
-The training script improves their efficiency through cross-validated
-hyperparameter search, without adding new model families.
+The improvement comes from better feature engineering, chronological train/test splitting and compact hyperparameter tuning.
 
-## Run the Project
-
-Install dependencies:
+## Run
 
 ```bash
 pip install -r requirements.txt
-```
-
-Prepare datasets and plots:
-
-```bash
 python scripts/prepare_data.py
-```
-
-Train the models:
-
-```bash
 python scripts/train_models.py
-```
-
-Generate closure scenarios:
-
-```bash
-python scripts/simulate_closures.py --top-n 5 --durations 14 30 90
-```
-
-Backtest normal-traffic forecasts:
-
-```bash
-python scripts/backtest_timeseries.py --top-n 5 --horizons 14 30 90 --models analog sarimax
-```
-
-Evaluate models and launch Streamlit:
-
-```bash
 python scripts/main.py
 ```
 
-Application URL:
+Streamlit then runs at:
 
 ```text
 http://localhost:8501
 ```
 
-## Main Outputs
+## Outputs
 
 - `results/model_metrics.csv`
 - `results/training_model_metrics.csv`
-- `results/training_cv_results.csv`
 - `results/feature_importance.csv`
-- `results/closure_simulation_summary.csv`
-- `results/time_series_backtest_metrics_aggregated.csv`
 - `plots/model_comparison.png`
 - `plots/feature_importance.png`
-- `plots/closure_simulations/*_focus.png`
-- `plots/backtests/*.png`
-
-## Interpretation
-
-The classification target is based on a transparent business criticality score.
-The model metrics therefore measure how well each model reproduces this scoring
-logic. The closure scenarios are counterfactual simulations and should be read
-as decision-support stress tests, not as exact vessel-by-vessel forecasts.
+- `plots/pump_brent_timeseries.png`
+- `plots/tanker_traffic_timeseries.png`
