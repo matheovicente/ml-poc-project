@@ -32,7 +32,7 @@ def _metric_card(label: str, value: str, help_text: str | None = None) -> None:
 
 def _show_image(path: Path, caption: str) -> None:
     if path.exists():
-        st.image(str(path), caption=caption, use_container_width=True)
+        st.image(str(path), caption=caption, use_column_width=True)
     else:
         st.info(f"Graphique non trouvé : `{path.name}`")
 
