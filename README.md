@@ -4,6 +4,57 @@ This project predicts whether the US regular gasoline price will increase the fo
 
 The business idea is to test whether maritime tanker traffic around strategic chokepoints, especially the Strait of Hormuz, adds useful signal to oil-market variables such as Brent.
 
+## Project Description
+
+This proof-of-concept machine learning project predicts the short-term direction of US regular gasoline prices. The prediction target is whether the pump price will increase during the following week.
+
+The project combines energy-market variables and maritime logistics signals:
+
+- US regular gasoline pump prices;
+- Brent crude oil prices;
+- US dollar index;
+- tanker traffic around strategic maritime chokepoints.
+
+The business objective is to create an early warning signal for fuel-price increases. This can help transport companies, logistics teams, energy analysts and risk teams anticipate short-term fuel-cost pressure.
+
+## How To Get And Rebuild The Data
+
+The processed dataset is already included in:
+
+```text
+data/processed/pump_price_dataset.csv
+```
+
+The raw PortWatch file used by the project is included in:
+
+```text
+data/raw/portwatch_daily_chokepoints.csv
+```
+
+The economic series are downloaded automatically from FRED when running the preparation script:
+
+- `GASREGW`: weekly US regular gasoline price;
+- `DCOILBRENTEU`: Brent crude oil price;
+- `DTWEXBGS`: US dollar index, when available.
+
+To rebuild the final dataset from the raw data and online FRED sources:
+
+```bash
+python scripts/prepare_data.py
+```
+
+To retrain the models:
+
+```bash
+python scripts/train_models.py
+```
+
+To evaluate the saved models and launch the Streamlit app:
+
+```bash
+python scripts/main.py
+```
+
 ## Business Case
 
 Gasoline prices are influenced by crude oil prices, refining constraints, demand cycles and geopolitical disruptions. Maritime chokepoints matter because a disruption in tanker flows can signal stress in energy supply chains.
